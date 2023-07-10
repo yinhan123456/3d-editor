@@ -14,6 +14,9 @@ export function getSize(imgUrl) {
 }
 
 // 将局部坐标系归零
+const p = new THREE.Vector3();
+const q = new THREE.Quaternion();
+const s = new THREE.Vector3();
 export function localToZero(obj) {
   if (obj.isCamera) return;
 
@@ -24,6 +27,11 @@ export function localToZero(obj) {
 
   if (obj.geometry) {
     obj.geometry.applyMatrix4(m);
+
+    m.decompose(p, q, s);
+    if (s.x * s.y * s.z < 0) {
+      flipMesh(obj)
+    }
   }
 
   obj.children.forEach((child) => {
@@ -31,6 +39,16 @@ export function localToZero(obj) {
     child.updateWorldMatrix(false, true);
     localToZero(child);
   });
+
+  // if (obj.isCamera) return;
+  // obj.children.forEach((child) => {
+
+  //   if (child.name === "Sphere001") {
+
+  //     child.position.z -= 1
+  //   }
+  //   localToZero(child);
+  // });
 }
 
 // 清楚多余数据
@@ -72,23 +90,40 @@ export function addSandTableTexture(model) {
   });
 }
 
+export function copyGeometry(model) {
+  model.traverse((child) => {
+    if (child.isMesh) {
+      child.geometry = child.geometry.clone();
+    }
+  });
+}
+
 // 法线翻转
 export function flip(model) {
   if (!model) return;
+
+  const p = new THREE.Vector3();
+  const q = new THREE.Quaternion();
+  const s = new THREE.Vector3();
+  model.updateWorldMatrix(true, true);
   model.traverse((child) => {
     if (child.isMesh) {
-      const needToFlip = child.scale.x * child.scale.y * child.scale.z < 0;
+      child.matrixWorld.decompose(p, q, s);
+      const needToFlip = s.x * s.y * s.z < 0;
       if (needToFlip && child.geometry.index) {
-        const index = child.geometry.index.array;
-        for (let i = 0, il = index.length / 3; i < il; i++) {
-          let x = index[i * 3];
-          index[i * 3] = index[i * 3 + 2];
-          index[i * 3 + 2] = x;
-        }
-        child.geometry.index.needsUpdate = true;
+        flipMesh(child);
       }
     }
   });
+}
+function flipMesh(mesh) {
+  const array = mesh.geometry.index.array;
+  for (let i = 0, il = array.length / 3; i < il; i++) {
+    let x = array[i * 3];
+    array[i * 3] = array[i * 3 + 2];
+    array[i * 3 + 2] = x;
+  }
+  mesh.geometry.index.needsUpdate = true;
 }
 
 export function getBoundingBox(model) {

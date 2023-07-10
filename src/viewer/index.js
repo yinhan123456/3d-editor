@@ -17,6 +17,7 @@ import {
   removeUnusedDate,
   flip,
   mapEncode,
+  copyGeometry,
 } from "./utils";
 import { SCENE_NAME } from "../scene";
 import { useSceneContext } from "../scene";
@@ -98,10 +99,18 @@ export const Viewer = forwardRef(function (props, ref) {
     if (model.length) {
       model.forEach((m) => g.add(m.scene));
 
-      flip(g);
+      copyGeometry(g);
       mapEncode(g);
       localToZero(g);
       removeUnusedDate(g);
+
+      // 车位
+      const ceil = g.getObjectByName("$$parking-ceil$$");
+      ceil &&
+        ceil.traverse((item) => {
+          if (item.isMesh) {
+            item.name = "$$parking-ceil$$" + item.name;}
+        });
 
       // 判断是不是沙盘
       const boundingBox = getBoundingBox(g);
